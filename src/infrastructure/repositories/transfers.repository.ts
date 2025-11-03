@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { TransferEntity } from '../../core/entities/transfer.entity';
 import { TransferStatus } from '../../core/entities/transfer-status.enum';
 import { TransferStatusFilter } from '../../core/entities/transfer-status-filter.enum';
@@ -13,44 +15,43 @@ import {
 
 @Injectable()
 export class TransfersRepository implements ITransfersRepository {
-  private transfers = new Map<string, TransferEntity>();
-  private nextId = 1;
+  constructor(
+    @InjectRepository(TransferEntity)
+    private transferRepository: Repository<TransferEntity>,
+  ) {}
 
   async create(transfer: TransferEntity): Promise<TransferEntity> {
-    const id = (this.nextId++).toString();
-    const newTransfer = TransferEntity.create(
-      id,
-      transfer.getAmount(),
-      transfer.getCurrency(),
-      transfer.getChannel(),
-      transfer.getRecipient(),
-      transfer.getMetadata(),
-      transfer.getStatus(),
-      transfer.getReference(),
-      transfer.getFees(),
-      transfer.getTotal(),
-      transfer.getCreatedAt(),
-      transfer.getUpdatedAt()
-    );
-    this.transfers.set(id, newTransfer);
-    return newTransfer;
+    const newTransfer = this.transferRepository.create({
+      amount: transfer.getAmount(),
+      currency: transfer.getCurrency(),
+      channel: transfer.getChannel(),
+      recipient: transfer.getRecipient(),
+      metadata: transfer.getMetadata(),
+      status: transfer.getStatus(),
+      reference: transfer.getReference(),
+      fees: transfer.getFees(),
+      total: transfer.getTotal(),
+      createdAt: transfer.getCreatedAt(),
+      updatedAt: transfer.getUpdatedAt(),
+    });
+    return await this.transferRepository.save(newTransfer);
   }
 
   async findById(id: string): Promise<TransferEntity | null> {
-    return this.transfers.get(id) || null;
+    return await this.transferRepository.findOne({ where: { id } });
   }
 
   async findAll(): Promise<TransferEntity[]> {
-    return Array.from(this.transfers.values());
+    return await this.transferRepository.find();
   }
 
   async findWithPagination(options: PaginationOptions): Promise<PaginatedTransfers> {
-    const allTransfers = Array.from(this.transfers.values());
-    const total = allTransfers.length;
+    const [data, total] = await this.transferRepository.findAndCount({
+      skip: (options.page - 1) * options.limit,
+      take: options.limit,
+    });
+
     const totalPages = Math.ceil(total / options.limit);
-    const startIndex = (options.page - 1) * options.limit;
-    const endIndex = startIndex + options.limit;
-    const data = allTransfers.slice(startIndex, endIndex);
 
     return {
       data,
@@ -62,46 +63,73 @@ export class TransfersRepository implements ITransfersRepository {
   }
 
   async findWithFilters(filters: TransferFilters): Promise<TransferEntity[]> {
-    const allTransfers = Array.from(this.transfers.values());
-    return allTransfers.filter((transfer) => {
-      if (filters.status && transfer.getStatus() !== (filters.status as unknown as TransferStatus)) {
-        return false;
-      }
-      if (filters.minAmount && transfer.getAmount() < filters.minAmount) {
-        return false;
-      }
-      if (filters.maxAmount && transfer.getAmount() > filters.maxAmount) {
-        return false;
-      }
-      if (filters.createdAfter && transfer.getCreatedAt() < filters.createdAfter) {
-        return false;
-      }
-      if (filters.createdBefore && transfer.getCreatedAt() > filters.createdBefore) {
-        return false;
-      }
-      if (filters.currency && transfer.getCurrency() !== filters.currency) {
-        return false;
-      }
-      if (filters.channel && transfer.getChannel() !== filters.channel) {
-        return false;
-      }
-      if (filters.reference && transfer.getReference() !== filters.reference) {
-        return false;
-      }
-      return true;
-    });
+    const queryBuilder = this.transferRepository.createQueryBuilder('transfer');
+
+    if (filters.status) {
+      queryBuilder.andWhere('transfer.status = :status', { status: filters.status });
+    }
+    if (filters.minAmount) {
+      queryBuilder.andWhere('transfer.amount >= :minAmount', { minAmount: filters.minAmount });
+    }
+    if (filters.maxAmount) {
+      queryBuilder.andWhere('transfer.amount <= :maxAmount', { maxAmount: filters.maxAmount });
+    }
+    if (filters.createdAfter) {
+      queryBuilder.andWhere('transfer.createdAt >= :createdAfter', { createdAfter: filters.createdAfter });
+    }
+    if (filters.createdBefore) {
+      queryBuilder.andWhere('transfer.createdAt <= :createdBefore', { createdBefore: filters.createdBefore });
+    }
+    if (filters.currency) {
+      queryBuilder.andWhere('transfer.currency = :currency', { currency: filters.currency });
+    }
+    if (filters.channel) {
+      queryBuilder.andWhere('transfer.channel = :channel', { channel: filters.channel });
+    }
+    if (filters.reference) {
+      queryBuilder.andWhere('transfer.reference = :reference', { reference: filters.reference });
+    }
+
+    return await queryBuilder.getMany();
   }
 
   async findWithFiltersAndPagination(
     filters: TransferFilters,
     options: PaginationOptions
   ): Promise<PaginatedTransfers> {
-    const filteredTransfers = await this.findWithFilters(filters);
-    const total = filteredTransfers.length;
+    const queryBuilder = this.transferRepository.createQueryBuilder('transfer');
+
+    if (filters.status) {
+      queryBuilder.andWhere('transfer.status = :status', { status: filters.status });
+    }
+    if (filters.minAmount) {
+      queryBuilder.andWhere('transfer.amount >= :minAmount', { minAmount: filters.minAmount });
+    }
+    if (filters.maxAmount) {
+      queryBuilder.andWhere('transfer.amount <= :maxAmount', { maxAmount: filters.maxAmount });
+    }
+    if (filters.createdAfter) {
+      queryBuilder.andWhere('transfer.createdAt >= :createdAfter', { createdAfter: filters.createdAfter });
+    }
+    if (filters.createdBefore) {
+      queryBuilder.andWhere('transfer.createdAt <= :createdBefore', { createdBefore: filters.createdBefore });
+    }
+    if (filters.currency) {
+      queryBuilder.andWhere('transfer.currency = :currency', { currency: filters.currency });
+    }
+    if (filters.channel) {
+      queryBuilder.andWhere('transfer.channel = :channel', { channel: filters.channel });
+    }
+    if (filters.reference) {
+      queryBuilder.andWhere('transfer.reference = :reference', { reference: filters.reference });
+    }
+
+    const [data, total] = await queryBuilder
+      .skip((options.page - 1) * options.limit)
+      .take(options.limit)
+      .getManyAndCount();
+
     const totalPages = Math.ceil(total / options.limit);
-    const startIndex = (options.page - 1) * options.limit;
-    const endIndex = startIndex + options.limit;
-    const data = filteredTransfers.slice(startIndex, endIndex);
 
     return {
       data,
@@ -113,22 +141,18 @@ export class TransfersRepository implements ITransfersRepository {
   }
 
   async findWithCursorPagination(options: CursorPaginationOptions): Promise<CursorPaginatedTransfers> {
-    const allTransfers = Array.from(this.transfers.values()).sort((a, b) =>
-      a.getId().localeCompare(b.getId())
-    );
+    const queryBuilder = this.transferRepository.createQueryBuilder('transfer');
 
-    let startIndex = 0;
     if (options.cursor) {
-      const cursorIndex = allTransfers.findIndex(t => t.getId() === options.cursor);
-      if (cursorIndex !== -1) {
-        startIndex = cursorIndex + 1;
-      }
+      queryBuilder.andWhere('transfer.id > :cursor', { cursor: options.cursor });
     }
 
-    const endIndex = startIndex + options.limit;
-    const data = allTransfers.slice(startIndex, endIndex);
-    const hasNextPage = endIndex < allTransfers.length;
-    const nextCursor = hasNextPage && data.length > 0 ? data[data.length - 1].getId() : undefined;
+    queryBuilder.orderBy('transfer.id', 'ASC').limit(options.limit + 1);
+
+    const transfers = await queryBuilder.getMany();
+    const hasNextPage = transfers.length > options.limit;
+    const data = hasNextPage ? transfers.slice(0, options.limit) : transfers;
+    const nextCursor = hasNextPage && data.length > 0 ? data[data.length - 1].id : undefined;
 
     return {
       data,
@@ -141,23 +165,43 @@ export class TransfersRepository implements ITransfersRepository {
     filters: TransferFilters,
     options: CursorPaginationOptions
   ): Promise<CursorPaginatedTransfers> {
-    const filteredTransfers = await this.findWithFilters(filters);
-    const sortedTransfers = filteredTransfers.sort((a, b) =>
-      a.getId().localeCompare(b.getId())
-    );
+    const queryBuilder = this.transferRepository.createQueryBuilder('transfer');
 
-    let startIndex = 0;
-    if (options.cursor) {
-      const cursorIndex = sortedTransfers.findIndex(t => t.getId() === options.cursor);
-      if (cursorIndex !== -1) {
-        startIndex = cursorIndex + 1;
-      }
+    if (filters.status) {
+      queryBuilder.andWhere('transfer.status = :status', { status: filters.status });
+    }
+    if (filters.minAmount) {
+      queryBuilder.andWhere('transfer.amount >= :minAmount', { minAmount: filters.minAmount });
+    }
+    if (filters.maxAmount) {
+      queryBuilder.andWhere('transfer.amount <= :maxAmount', { maxAmount: filters.maxAmount });
+    }
+    if (filters.createdAfter) {
+      queryBuilder.andWhere('transfer.createdAt >= :createdAfter', { createdAfter: filters.createdAfter });
+    }
+    if (filters.createdBefore) {
+      queryBuilder.andWhere('transfer.createdAt <= :createdBefore', { createdBefore: filters.createdBefore });
+    }
+    if (filters.currency) {
+      queryBuilder.andWhere('transfer.currency = :currency', { currency: filters.currency });
+    }
+    if (filters.channel) {
+      queryBuilder.andWhere('transfer.channel = :channel', { channel: filters.channel });
+    }
+    if (filters.reference) {
+      queryBuilder.andWhere('transfer.reference = :reference', { reference: filters.reference });
     }
 
-    const endIndex = startIndex + options.limit;
-    const data = sortedTransfers.slice(startIndex, endIndex);
-    const hasNextPage = endIndex < sortedTransfers.length;
-    const nextCursor = hasNextPage && data.length > 0 ? data[data.length - 1].getId() : undefined;
+    if (options.cursor) {
+      queryBuilder.andWhere('transfer.id > :cursor', { cursor: options.cursor });
+    }
+
+    queryBuilder.orderBy('transfer.id', 'ASC').limit(options.limit + 1);
+
+    const transfers = await queryBuilder.getMany();
+    const hasNextPage = transfers.length > options.limit;
+    const data = hasNextPage ? transfers.slice(0, options.limit) : transfers;
+    const nextCursor = hasNextPage && data.length > 0 ? data[data.length - 1].id : undefined;
 
     return {
       data,
@@ -167,23 +211,26 @@ export class TransfersRepository implements ITransfersRepository {
   }
 
   async update(id: string, updateData: Partial<TransferEntity>): Promise<TransferEntity | null> {
-    const transfer = this.transfers.get(id);
+    const transfer = await this.findById(id);
     if (!transfer) {
       return null;
     }
 
-    if (updateData.getAmount !== undefined) {
-      transfer.setAmount(updateData.getAmount());
+    if (updateData.amount !== undefined) {
+      transfer.amount = updateData.amount;
     }
-    if (updateData.getStatus !== undefined) {
-      transfer.setStatus(updateData.getStatus());
+    if (updateData.status !== undefined) {
+      transfer.status = updateData.status;
+    }
+    if (updateData.updatedAt !== undefined) {
+      transfer.updatedAt = updateData.updatedAt;
     }
 
-    this.transfers.set(id, transfer);
-    return transfer;
+    return await this.transferRepository.save(transfer);
   }
 
   async delete(id: string): Promise<boolean> {
-    return this.transfers.delete(id);
+    const result = await this.transferRepository.delete(id);
+    return (result.affected ?? 0) > 0;
   }
 }

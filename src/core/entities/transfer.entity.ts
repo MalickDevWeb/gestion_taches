@@ -1,3 +1,4 @@
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { TransferStatus } from './transfer-status.enum';
 import { FeeConstants } from '../constants/fee-constants.enum';
@@ -11,21 +12,55 @@ interface Metadata {
   [key: string]: any;
 }
 
+@Entity('transfers')
 export class TransferEntity {
-  constructor(
-    private id: string,
-    private amount: number,
-    private currency: string,
-    private channel: string,
-    private recipient: Recipient,
-    private metadata: Metadata,
-    private status: TransferStatus,
-    private reference: string,
-    private fees: number,
-    private total: number,
-    private createdAt: Date,
-    private updatedAt: Date
-  ) {}
+  @PrimaryGeneratedColumn('uuid')
+  @ApiProperty({ description: 'Transfer ID' })
+  id!: string;
+
+  @Column('decimal', { precision: 10, scale: 2 })
+  @ApiProperty({ description: 'Transfer amount' })
+  amount!: number;
+
+  @Column({ length: 3, default: 'XOF' })
+  @ApiProperty({ description: 'Currency code' })
+  currency!: string;
+
+  @Column({ length: 50 })
+  @ApiProperty({ description: 'Transfer channel' })
+  channel!: string;
+
+  @Column('simple-json')
+  @ApiProperty({ description: 'Recipient information' })
+  recipient!: Recipient;
+
+  @Column('simple-json', { nullable: true })
+  @ApiProperty({ description: 'Additional metadata' })
+  metadata!: Metadata;
+
+  @Column({ type: 'varchar', default: TransferStatus.PENDING })
+  @ApiProperty({ description: 'Transfer status', enum: TransferStatus })
+  status!: TransferStatus;
+
+  @Column({ unique: true, length: 100 })
+  @ApiProperty({ description: 'Transfer reference' })
+  reference!: string;
+
+  @Column('decimal', { precision: 10, scale: 2 })
+  @ApiProperty({ description: 'Transfer fees' })
+  fees!: number;
+
+  @Column('decimal', { precision: 10, scale: 2 })
+  @ApiProperty({ description: 'Total amount including fees' })
+  total!: number;
+
+  @CreateDateColumn()
+  @ApiProperty({ description: 'Creation timestamp' })
+  createdAt!: Date;
+
+  @UpdateDateColumn()
+  @ApiProperty({ description: 'Last update timestamp' })
+  updatedAt!: Date;
 
   static create(
     id: string,
@@ -41,20 +76,20 @@ export class TransferEntity {
     createdAt: Date,
     updatedAt: Date
   ): TransferEntity {
-    return new TransferEntity(
-      id,
-      amount,
-      currency,
-      channel,
-      recipient,
-      metadata,
-      status,
-      reference,
-      fees,
-      total,
-      createdAt,
-      updatedAt
-    );
+    const entity = new TransferEntity();
+    entity.id = id;
+    entity.amount = amount;
+    entity.currency = currency;
+    entity.channel = channel;
+    entity.recipient = recipient;
+    entity.metadata = metadata;
+    entity.status = status;
+    entity.reference = reference;
+    entity.fees = fees;
+    entity.total = total;
+    entity.createdAt = createdAt;
+    entity.updatedAt = updatedAt;
+    return entity;
   }
 
   // Getters

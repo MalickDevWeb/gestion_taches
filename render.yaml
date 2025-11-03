@@ -1,0 +1,64 @@
+services:
+  - type: web
+    name: dexchange-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_TYPE
+        value: postgres
+      - key: DB_HOST
+        fromDatabase:
+          name: dexchange-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: dexchange-db
+          property: port
+      - key: DB_USERNAME
+        fromDatabase:
+          name: dexchange-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: dexchange-db
+          property: password
+      - key: DB_NAME
+        fromDatabase:
+          name: dexchange-db
+          property: database
+      - key: API_KEY
+        generateValue: true
+      - key: REDIS_HOST
+        fromService:
+          type: redis
+          name: dexchange-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: redis
+          name: dexchange-redis
+          property: port
+      - key: PORT
+        value: 10000
+
+  - type: redis
+    name: dexchange-redis
+    ipAllowList: []  # only accessible by other services
+
+  - type: pserv
+    name: dexchange-db
+    runtime: docker
+    dockerfilePath: ./Dockerfile.db
+    envVars:
+      - key: POSTGRES_DB
+        value: dexchange_db
+      - key: POSTGRES_USER
+        value: postgres
+      - key: POSTGRES_PASSWORD
+        generateValue: true
+    disk:
+      name: dexchange-data
+      mountPath: /var/lib/postgresql/data
+      sizeGB: 10

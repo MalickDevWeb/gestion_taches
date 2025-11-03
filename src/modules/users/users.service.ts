@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PaginationDto, PaginatedResponse } from '../../core/dto/pagination.dto';
@@ -6,38 +8,37 @@ import { UserEntity } from '../../core/entities/user.entity';
 
 @Injectable()
 export class UsersService {
-  private users: UserEntity[] = [];
+  constructor(
+    @InjectRepository(UserEntity)
+    private userRepository: Repository<UserEntity>,
+  ) {}
 
-  create(createUserDto: CreateUserDto): UserEntity {
-    const id = this.users.length + 1;
-    const user = new UserEntity(
-      id,
-      createUserDto.name,
-      createUserDto.email,
-      createUserDto.password,
-      new Date(),
-      new Date()
-    );
-    this.users.push(user);
-    return user;
+  async create(createUserDto: CreateUserDto): Promise<UserEntity> {
+    const user = this.userRepository.create({
+      name: createUserDto.name,
+      email: createUserDto.email,
+      password: createUserDto.password,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    return await this.userRepository.save(user);
   }
 
-  findAll(pagination: PaginationDto): PaginatedResponse<UserEntity> {
+  async findAll(pagination: PaginationDto): Promise<PaginatedResponse<UserEntity>> {
     const { cursor, limit = 10 } = pagination;
-    const sortedUsers = this.users.sort((a, b) => a.getId() - b.getId());
 
-    let startIndex = 0;
+    const queryBuilder = this.userRepository.createQueryBuilder('user');
+
     if (cursor) {
-      const cursorIndex = sortedUsers.findIndex(u => u.getId().toString() === cursor);
-      if (cursorIndex !== -1) {
-        startIndex = cursorIndex + 1;
-      }
+      queryBuilder.where('user.id > :cursor', { cursor: parseInt(cursor) });
     }
 
-    const endIndex = startIndex + limit;
-    const data = sortedUsers.slice(startIndex, endIndex);
-    const hasNextPage = endIndex < sortedUsers.length;
-    const nextCursor = hasNextPage && data.length > 0 ? data[data.length - 1].getId().toString() : undefined;
+    queryBuilder.orderBy('user.id', 'ASC').limit(limit + 1);
+
+    const users = await queryBuilder.getMany();
+    const hasNextPage = users.length > limit;
+    const data = hasNextPage ? users.slice(0, limit) : users;
+    const nextCursor = hasNextPage && data.length > 0 ? data[data.length - 1].id.toString() : undefined;
 
     return {
       data,
@@ -46,25 +47,25 @@ export class UsersService {
     };
   }
 
-  findOne(id: number): UserEntity | null {
-    return this.users.find(user => user.getId() === id) || null;
+  async findOne(id: number): Promise<UserEntity | null> {
+    return await this.userRepository.findOne({ where: { id } });
   }
 
-  update(id: number, updateUserDto: UpdateUserDto): UserEntity | null {
-    const userIndex = this.users.findIndex(user => user.getId() === id);
-    if (userIndex === -1) return null;
+  async update(id: number, updateUserDto: UpdateUserDto): Promise<UserEntity | null> {
+    const user = await this.findOne(id);
+    if (!user) return null;
 
-    const user = this.users[userIndex];
-    // In a real implementation, you'd update the user properties
-    // For now, just return the existing user
-    return user;
+    // Update user properties
+    if (updateUserDto.name) user.name = updateUserDto.name;
+    if (updateUserDto.email) user.email = updateUserDto.email;
+    if (updateUserDto.password) user.password = updateUserDto.password;
+    user.updatedAt = new Date();
+
+    return await this.userRepository.save(user);
   }
 
-  remove(id: number): boolean {
-    const userIndex = this.users.findIndex(user => user.getId() === id);
-    if (userIndex === -1) return false;
-
-    this.users.splice(userIndex, 1);
-    return true;
+  async remove(id: number): Promise<boolean> {
+    const result = await this.userRepository.delete(id);
+    return (result.affected ?? 0) > 0;
   }
 }

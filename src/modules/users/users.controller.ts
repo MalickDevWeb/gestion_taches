@@ -41,8 +41,8 @@ export class UsersController {
       }
     }
   })
-  findAll(@Query() pagination: PaginationDto): PaginatedResponse<UserEntity> {
-    return this.usersService.findAll(pagination);
+  async findAll(@Query() pagination: PaginationDto): Promise<PaginatedResponse<UserEntity>> {
+    return await this.usersService.findAll(pagination);
   }
 
   @Get(':id')

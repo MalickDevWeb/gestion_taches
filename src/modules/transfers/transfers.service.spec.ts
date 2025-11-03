@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TransfersService } from './transfers.service';
 import { TransferEntity } from '../../core/entities/transfer.entity';
 import { TransferStatus } from '../../core/entities/transfer-status.enum';
+import { TransferStatusFilter } from '../../core/entities/transfer-status-filter.enum';
 import { ITransfersRepository } from '../../core/interfaces/transfers-repository.interface';
 import { CreateTransferDto } from './dto/create-transfer.dto';
 import { UpdateTransferDto } from './dto/update-transfer.dto';
@@ -18,12 +19,20 @@ describe('TransfersService', () => {
       findWithFiltersAndCursorPagination: jest.fn(),
     };
 
+    const mockQueue = {
+      add: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TransfersService,
         {
           provide: 'ITransfersRepository',
           useValue: mockTransfersRepository,
+        },
+        {
+          provide: 'BullQueue_transfer-processing',
+          useValue: mockQueue,
         },
       ],
     }).compile();
@@ -44,7 +53,21 @@ describe('TransfersService', () => {
     const expectedFees = Math.min(Math.max(Math.ceil(10000 * 0.008), 100), 1500); // 80, but min 100 = 100
     const expectedTotal = 10000 + expectedFees;
 
-    mockRepository.create.mockResolvedValue({} as TransferEntity);
+    const mockTransfer = TransferEntity.create(
+      'test-id',
+      10000,
+      'USD',
+      'mobile',
+      { phone: '+1234567890', name: 'John Doe' },
+      {},
+      TransferStatus.PENDING,
+      'TRF-20231101-ABCD',
+      100,
+      10100,
+      new Date(),
+      new Date()
+    );
+    mockRepository.create.mockResolvedValue(mockTransfer);
 
     await service.create(createTransferDto);
 
@@ -220,7 +243,7 @@ describe('TransfersService', () => {
   describe('findAll', () => {
     it('should call repository with correct filters and options', async () => {
       const query = {
-        status: TransferStatus.PENDING,
+        status: TransferStatusFilter.PENDING,
         minAmount: 100,
         maxAmount: 1000,
         createdAfter: '2023-11-01',
@@ -240,7 +263,7 @@ describe('TransfersService', () => {
       expect(result).toBe(mockResult);
       expect(mockRepository.findWithFiltersAndCursorPagination).toHaveBeenCalledWith(
         {
-          status: TransferStatus.PENDING,
+          status: TransferStatusFilter.PENDING,
           minAmount: 100,
           maxAmount: 1000,
           createdAfter: new Date('2023-11-01'),

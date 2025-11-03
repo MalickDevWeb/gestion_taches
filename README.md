@@ -1,98 +1,208 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# NestJS API for Transfer Management
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A comprehensive NestJS application for managing financial transfers, users, and tasks with built-in audit logging, API key authentication, and Swagger documentation.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Features
 
-## Description
+- **Transfer Management**: Create, read, update, and track transfer statuses with comprehensive audit trails
+- **User Management**: Full CRUD operations for user entities
+- **Task Management**: Basic task tracking functionality
+- **Audit Logging**: Automatic logging of all transfer operations with before/after values
+- **API Key Authentication**: Secure access control for sensitive endpoints
+- **Swagger Documentation**: Interactive API documentation at `/docs`
+- **PostgreSQL Integration**: Database persistence with Neon hosting
+- **Validation & Transformation**: Input validation using class-validator and class-transformer
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Prerequisites
 
-## Project setup
+- Node.js (version 18 or higher)
+- npm or yarn
+- PostgreSQL database (Neon recommended for cloud hosting)
 
+## Installation
+
+1. Clone the repository:
 ```bash
-$ npm install
+git clone <repository-url>
+cd apprendre_nest
 ```
 
-## Compile and run the project
-
+2. Install dependencies:
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm install
 ```
 
-## Run tests
-
+3. Set up environment variables:
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+cp .env.example .env
+# Edit .env with your actual values
 ```
 
-## Deployment
+## Environment Variables
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+The application requires the following environment variables:
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `DATABASE_URL` | PostgreSQL connection string | Yes | - |
+| `API_KEY` | API key for authenticating requests to transfers endpoints | Yes | - |
+| `PORT` | Server port | No | 3001 |
+
+## Database Setup
+
+### Using Neon (Recommended)
+
+1. Create a Neon account at https://neon.tech
+2. Create a new project and database
+3. Copy the connection string from the dashboard
+4. Set it as `DATABASE_URL` in your `.env` file
+
+### Manual Database Setup
+
+If you prefer local PostgreSQL:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+# Create database
+createdb transfer_api
+
+# Set DATABASE_URL in .env
+DATABASE_URL="postgresql://username:password@localhost:5432/transfer_api"
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## Running the Application
 
-## Resources
+### Development Mode
+```bash
+npm run start:dev
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+### Production Mode
+```bash
+npm run build
+npm run start:prod
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+The server will start on `http://localhost:3001` (or your configured PORT).
 
-## Support
+## API Documentation
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+Once running, visit `http://localhost:3001/docs` for interactive Swagger documentation.
 
-## Stay in touch
+## API Endpoints
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+All endpoints are prefixed with `/api`. Transfers endpoints require API key authentication.
 
-## License
+### Transfers (`/api/transfers`)
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+**Authentication**: Required (API Key in `x-api-key` header)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/transfers` | Create a new transfer |
+| GET | `/api/transfers` | Get all transfers (with optional filters) |
+| GET | `/api/transfers/:id` | Get transfer by ID |
+| PATCH | `/api/transfers/:id` | Update transfer status |
+| POST | `/api/transfers/:id/simulate` | Simulate transfer processing |
+| GET | `/api/transfers/:id/audit` | Get audit logs for transfer |
+
+### Users (`/api/users`)
+
+**Authentication**: None required
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/users` | Create a new user |
+| GET | `/api/users` | Get all users |
+| GET | `/api/users/:id` | Get user by ID |
+| PATCH | `/api/users/:id` | Update user |
+| DELETE | `/api/users/:id` | Delete user |
+
+### Tasks (`/api/tasks`)
+
+**Authentication**: None required
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/tasks` | Create a new task |
+| GET | `/api/tasks` | Get all tasks |
+| GET | `/api/tasks/:id` | Get task by ID |
+| PATCH | `/api/tasks/:id` | Update task |
+| DELETE | `/api/tasks/:id` | Delete task |
+
+## Usage Examples
+
+### Creating a Transfer (Requires API Key)
+```bash
+curl -X POST http://localhost:3001/api/transfers \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: your-api-key-here" \
+  -d '{
+    "amount": 1000,
+    "currency": "USD",
+    "channel": "mobile",
+    "recipient": {
+      "phone": "+1234567890",
+      "name": "John Doe"
+    },
+    "metadata": { "source": "web" },
+    "reference": "TXN-12345"
+  }'
+```
+
+### Getting All Transfers with Filters
+```bash
+curl "http://localhost:3001/api/transfers?status=PENDING&limit=10" \
+  -H "x-api-key: your-api-key-here"
+```
+
+### Creating a User
+```bash
+curl -X POST http://localhost:3001/api/users \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "name": "John Doe"}'
+```
+
+### Getting Transfer Audit Logs
+```bash
+curl http://localhost:3001/api/transfers/123/audit \
+  -H "x-api-key: your-api-key-here"
+```
+
+## Troubleshooting
+
+### Erreur "exports is not defined"
+Si vous obtenez cette erreur, c'est probablement un problème de modules. Assurez-vous que :
+1. Votre `tsconfig.json` utilise `"module": "nodenext"` ou `"module": "commonjs"`
+2. Le client Prisma est régénéré après les changements de configuration
+
+### Erreur de connexion à la base de données
+1. Vérifiez que votre `DATABASE_URL` dans `.env` est correcte
+2. Assurez-vous que votre base Neon accepte les connexions depuis votre IP
+3. Vérifiez que le SSL est activé (`sslmode=require`)
+
+### Le serveur ne démarre pas
+1. Vérifiez les logs de démarrage pour les erreurs TypeScript
+2. Assurez-vous que tous les imports sont corrects
+3. Vérifiez que le client Prisma est généré
+
+## Commandes Prisma utiles
+
+```bash
+# Générer le client
+npx prisma generate
+
+# Voir le statut de la base de données
+npx prisma db push --preview-feature
+
+# Ouvrir Prisma Studio (interface graphique)
+npx prisma studio
+
+# Créer une migration (si vous utilisez les migrations)
+npx prisma migrate dev --name init
+```
+
+## Sécurité
+
+- Ne commitez jamais votre fichier `.env` avec des informations sensibles
+- Utilisez des variables d'environnement pour toutes les configurations sensibles
+- Activez le SSL pour les connexions à la base de données en production

@@ -42,10 +42,13 @@ services:
           property: port
       - key: PORT
         value: 10000
+    healthCheckPath: /api/v1/papamalickteuw/users
+    plan: starter
 
   - type: redis
     name: dexchange-redis
     ipAllowList: []  # only accessible by other services
+    plan: starter
 
   - type: pserv
     name: dexchange-db
@@ -62,3 +65,4 @@ services:
       name: dexchange-data
       mountPath: /var/lib/postgresql/data
       sizeGB: 10
+    plan: starter

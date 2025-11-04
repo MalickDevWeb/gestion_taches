@@ -27,12 +27,12 @@ RUN adduser -S nestjs -u 1001
 RUN chown -R nestjs:nodejs /app
 USER nestjs
 
-# Expose port
-EXPOSE 3001
+# Expose port (use PORT env var)
+EXPOSE 10000
 
-# Health check
+# Health check (corrected port and endpoint)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:10000/api/v1/papamalickteuw/users || exit 1
+  CMD curl -f http://localhost:${PORT:-10000}/api/v1/papamalickteuw/users || exit 1
 
-# Start the application
-CMD ["npm", "run", "start:prod"]
+# Run migrations before starting the app (with error handling)
+CMD ["sh", "-c", "npm run migration:run || echo 'Migrations failed, continuing...' && npm run start:prod"]

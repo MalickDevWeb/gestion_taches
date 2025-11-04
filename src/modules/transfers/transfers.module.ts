@@ -13,8 +13,14 @@ import { TransferResponseTransformer } from './transfer-response.transformer';
 @Module({
   imports: [
     TypeOrmModule.forFeature([TransferEntity]),
-    BullModule.registerQueue({
+    BullModule.registerQueueAsync({
       name: 'transfer-processing',
+      useFactory: () => ({
+        connection: {
+          host: process.env.REDIS_HOST || 'localhost',
+          port: parseInt(process.env.REDIS_PORT || '6379'),
+        },
+      }),
     }),
   ],
   controllers: [TransfersController],

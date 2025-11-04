@@ -9,6 +9,14 @@ import { databaseConfig } from './config/database.config';
 @Module({
   imports: [
     TypeOrmModule.forRoot(databaseConfig),
+    BullModule.forRootAsync({
+      useFactory: () => ({
+        connection: {
+          host: process.env.REDIS_HOST || 'localhost',
+          port: parseInt(process.env.REDIS_PORT || '6379'),
+        },
+      }),
+    }),
     TransfersModule,
   ],
 })

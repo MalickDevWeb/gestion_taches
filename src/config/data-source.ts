@@ -5,7 +5,10 @@ import { TransferEntity } from '../core/entities/transfer.entity';
 export const AppDataSource = new DataSource({
   type: 'postgres',
   ...(process.env.DATABASE_URL
-    ? { url: process.env.DATABASE_URL }
+    ? {
+        url: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false }
+      }
     : {
         host: process.env.DB_HOST || 'localhost',
         port: parseInt(process.env.DB_PORT || '5432'),
@@ -15,9 +18,10 @@ export const AppDataSource = new DataSource({
       }),
   entities: [UserEntity, TransferEntity],
   migrations: ['dist/migrations/*{.ts,.js}'],
-  synchronize: process.env.NODE_ENV !== 'production',
+  synchronize: false, // Désactiver synchronize en production
+  migrationsRun: false, // Les migrations sont exécutées manuellement
   logging: process.env.NODE_ENV === 'development',
-  extra: {
+  extra: process.env.DATABASE_URL ? {} : {
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   },
 });

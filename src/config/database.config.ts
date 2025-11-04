@@ -7,7 +7,7 @@ export const databaseConfig: TypeOrmModuleOptions = {
   migrations: ['dist/migrations/*{.ts,.js}'],
   synchronize: false, // Désactiver synchronisation pour éviter conflits
   logging: process.env.NODE_ENV === 'development',
-  migrationsRun: true, // Utiliser migrations
+  migrationsRun: false, // Désactiver migrations auto en production
   extra: {
     ssl: { rejectUnauthorized: false }
   }

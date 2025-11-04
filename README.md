@@ -280,6 +280,85 @@ npm run lint              # Run ESLint
 npm run format            # Format code with Prettier
 ```
 
+## Deployment on Render
+
+### Prerequisites
+
+1. **Render Account**: Create an account at [render.com](https://render.com)
+2. **GitHub Repository**: Push your code to a GitHub repository
+
+### Deployment Steps
+
+1. **Connect Repository**:
+   - Go to [dashboard.render.com](https://dashboard.render.com)
+   - Click "New" → "Blueprint"
+   - Connect your GitHub repository
+
+2. **Deploy with Blueprint**:
+   - Render will automatically detect the `render.yaml` file
+   - It will create:
+     - **Web Service**: Your NestJS API
+     - **PostgreSQL Database**: Persistent data storage
+     - **Redis**: For BullMQ queues
+
+3. **Environment Variables**:
+   - Render will automatically generate:
+     - `API_KEY`: Random secure key for authentication
+     - Database credentials
+     - Redis connection details
+
+4. **Access Your API**:
+   - After deployment, you'll get a URL like: `https://dexchange-api.onrender.com`
+   - API documentation: `https://dexchange-api.onrender.com/docs`
+   - Health check: `https://dexchange-api.onrender.com/api/v1/papamalickteuw/users`
+
+### Manual Deployment (Alternative)
+
+If you prefer manual setup:
+
+1. **Create PostgreSQL Database**:
+   - Go to Render → New → PostgreSQL
+   - Note the connection details
+
+2. **Create Redis Instance**:
+   - Go to Render → New → Redis
+   - Note the connection details
+
+3. **Create Web Service**:
+   - Go to Render → New → Web Service
+   - Connect your GitHub repo
+   - Set build command: `npm run build`
+   - Set start command: `npm run start:prod`
+   - Add environment variables from `.env.example`
+
+### Post-Deployment
+
+After successful deployment:
+
+```bash
+# Test your deployed API
+curl https://your-app-name.onrender.com/api/v1/papamalickteuw/users
+
+# Check API documentation
+open https://your-app-name.onrender.com/docs
+
+# Verify database connection
+curl -H "x-api-key: your-generated-api-key" \
+  https://your-app-name.onrender.com/api/v1/papamalickteuw/transfers
+```
+
+### Troubleshooting
+
+- **Build Failures**: Check Render logs for TypeScript errors
+- **Database Connection**: Verify environment variables are set correctly
+- **Health Check**: Ensure the health check endpoint returns 200
+- **Cold Starts**: First requests may be slow due to serverless nature
+
+### Costs
+
+- **Free Tier**: 750 hours/month, suitable for development/testing
+- **Paid Plans**: Start from $7/month for persistent services
+
 ## Migration Files
 
 The project includes the following migration files:

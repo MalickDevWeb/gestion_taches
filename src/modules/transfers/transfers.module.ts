@@ -38,8 +38,28 @@ import { CleanupService } from './cleanup.service';
         };
       },
     }),
-    BullModule.registerQueue({
+    BullModule.registerQueueAsync({
       name: 'cleanup',
+      useFactory: (): any => {
+        if (process.env.REDIS_URL) {
+          return { connection: process.env.REDIS_URL };
+        }
+        // For production deployment, disable Redis if not available
+        if (process.env.NODE_ENV === 'production' && !process.env.REDIS_URL) {
+          return {
+            connection: {
+              host: 'disabled',
+              port: 6379,
+            },
+          };
+        }
+        return {
+          connection: {
+            host: process.env.REDIS_HOST || 'localhost',
+            port: parseInt(process.env.REDIS_PORT || '6379'),
+          },
+        };
+      },
     }),
   ],
   controllers: [TransfersController],

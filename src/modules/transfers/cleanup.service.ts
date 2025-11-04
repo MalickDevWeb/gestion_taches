@@ -16,7 +16,7 @@ export class CleanupService extends ErrorHandlingTrait {
   /**
    * Schedule daily cleanup at midnight
    * Keeps only the last 10 transfers
-   * Note: Requires @nestjs/schedule package for cron jobs
+   * Note: For production, use a cron job or external scheduler
    */
   async scheduledCleanup(): Promise<void> {
     try {

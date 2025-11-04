@@ -2,10 +2,9 @@ import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan, Not } from 'typeorm';
+import { Repository } from 'typeorm';
 import { TransferEntity } from '../../core/entities/transfer.entity';
 import { AuditService } from './audit.service';
-import { ErrorHandlingTrait } from '../../core/traits/error-handling.trait';
 
 export interface CleanupJobData {
   keepLastN: number;
@@ -21,7 +20,7 @@ export interface CleanupJobData {
 
 @Injectable()
 @Processor('cleanup')
-export class CleanupProcessor extends ErrorHandlingTrait {
+export class CleanupProcessor extends WorkerHost {
   constructor(
     @InjectRepository(TransferEntity)
     private readonly transferRepository: Repository<TransferEntity>,
@@ -30,11 +29,13 @@ export class CleanupProcessor extends ErrorHandlingTrait {
     super();
   }
 
+  private readonly logger = new Logger(CleanupProcessor.name);
+
   async process(job: Job<CleanupJobData>): Promise<void> {
     const { keepLastN, filters } = job.data;
 
     try {
-      this.logInfo(`Starting cleanup job: keep last ${keepLastN} transfers`, { filters });
+      this.logger.log(`Starting cleanup job: keep last ${keepLastN} transfers`, { filters });
 
       // Build query with filters
       const queryBuilder = this.transferRepository.createQueryBuilder('transfer');
@@ -67,7 +68,7 @@ export class CleanupProcessor extends ErrorHandlingTrait {
       const allTransfers = await queryBuilder.getMany();
 
       if (allTransfers.length <= keepLastN) {
-        this.logInfo(`No cleanup needed: only ${allTransfers.length} transfers found, keeping ${keepLastN}`);
+        this.logger.log(`No cleanup needed: only ${allTransfers.length} transfers found, keeping ${keepLastN}`);
         return;
       }
 
@@ -75,7 +76,7 @@ export class CleanupProcessor extends ErrorHandlingTrait {
       const transfersToDelete = allTransfers.slice(keepLastN);
       const transferIdsToDelete = transfersToDelete.map(t => t.id);
 
-      this.logInfo(`Deleting ${transfersToDelete.length} transfers`, {
+      this.logger.log(`Deleting ${transfersToDelete.length} transfers`, {
         transferIds: transferIdsToDelete,
         filters
       });
@@ -93,21 +94,21 @@ export class CleanupProcessor extends ErrorHandlingTrait {
         );
       }
 
-      this.logInfo(`Cleanup completed: deleted ${deleteResult.affected} transfers`);
+      this.logger.log(`Cleanup completed: deleted ${deleteResult.affected} transfers`);
 
     } catch (error) {
-      this.handleError(error, 'CleanupProcessor.process');
+      this.logger.error(`Error in CleanupProcessor.process`, error);
       throw error;
     }
   }
 
   @OnWorkerEvent('completed')
   onCompleted(job: Job<CleanupJobData>) {
-    this.logInfo(`Cleanup job ${job.id} completed successfully`);
+    this.logger.log(`Cleanup job ${job.id} completed successfully`);
   }
 
   @OnWorkerEvent('failed')
   onFailed(job: Job<CleanupJobData>, err: Error) {
-    this.logError(`Cleanup job ${job.id} failed`, err);
+    this.logger.error(`Cleanup job ${job.id} failed`, err);
   }
 }

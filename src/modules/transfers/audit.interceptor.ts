@@ -26,14 +26,13 @@ export class AuditInterceptor implements NestInterceptor {
     }
 
     // Determine action based on method and URL
-    if (method === 'POST' && url.includes('/transfers')) {
-      action = 'CREATE';
+    if (method === 'POST' && url.includes('/transfers') && !url.includes('/process') && !url.includes('/cancel')) {
+      action = 'TRANSFER_CREATED';
       newValues = body;
-    } else if (method === 'PATCH' && url.includes('/transfers/')) {
-      action = 'UPDATE';
-      newValues = body;
-    } else if (method === 'POST' && url.includes('/simulate')) {
-      action = 'SIMULATE_PROCESSING';
+    } else if (method === 'POST' && url.includes('/process')) {
+      action = 'TRANSFER_PROCESSING';
+    } else if (method === 'POST' && url.includes('/cancel')) {
+      action = 'TRANSFER_CANCELED';
     } else {
       return next.handle();
     }

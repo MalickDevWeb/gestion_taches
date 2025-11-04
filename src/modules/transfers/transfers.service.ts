@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, Inject } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { TransferEntity } from '../../core/entities/transfer.entity';
@@ -9,6 +9,7 @@ import { CreateTransferDto } from './dto/create-transfer.dto';
 import { UpdateTransferDto } from './dto/update-transfer.dto';
 import { TransferQueryDto } from './dto/transfer-query.dto';
 import { TransferProcessingJobData } from './transfer-processing.processor';
+import { AuditService } from './audit.service';
 
 @Injectable()
 export class TransfersService {
@@ -16,7 +17,8 @@ export class TransfersService {
     @Inject('ITransfersRepository')
     private readonly transfersRepository: ITransfersRepository,
     @InjectQueue('transfer-processing')
-    private readonly transferProcessingQueue: Queue<TransferProcessingJobData>
+    private readonly transferProcessingQueue: Queue<TransferProcessingJobData>,
+    private readonly auditService: AuditService
   ) {}
 
   async create(createTransferDto: CreateTransferDto): Promise<TransferEntity> {
@@ -93,25 +95,32 @@ export class TransfersService {
     return updatedTransfer;
   }
 
-  async simulateProcessing(id: string): Promise<TransferEntity> {
+  async processTransfer(id: string): Promise<TransferEntity> {
     const transfer = await this.findById(id);
     if (transfer.getStatus() !== TransferStatus.PENDING) {
-      throw new Error('Only pending transfers can be simulated');
+      throw new ConflictException('Transfer is not in a processable state');
     }
 
-    // Simulate processing
+    // Set to processing
     transfer.setStatus(TransferStatus.PROCESSING);
 
-    // Simulate random outcome
-    const isSuccess = Math.random() > 0.1; // 90% success rate
+    // Simulate random outcome (70% success, 30% failed)
+    const isSuccess = Math.random() > 0.3;
     setTimeout(() => {
       if (isSuccess) {
         transfer.setStatus(TransferStatus.COMPLETED);
+        // Log success audit
+        this.auditService?.log(id, 'TRANSFER_SUCCESS', { status: TransferStatus.PROCESSING }, { status: TransferStatus.COMPLETED });
       } else {
         transfer.setStatus(TransferStatus.FAILED);
+        // Log failure audit
+        this.auditService?.log(id, 'TRANSFER_FAILED', { status: TransferStatus.PROCESSING }, { status: TransferStatus.FAILED });
       }
       this.transfersRepository.update(id, transfer);
     }, 2000); // Simulate 2 second processing time
+
+    // Log processing start
+    this.auditService?.log(id, 'TRANSFER_PROCESSING', { status: TransferStatus.PENDING }, { status: TransferStatus.PROCESSING });
 
     const updatedTransfer = await this.transfersRepository.update(id, transfer);
     if (!updatedTransfer) {
@@ -123,6 +132,24 @@ export class TransfersService {
   private calculateFees(amount: number): number {
     const fee = Math.ceil(amount * 0.008);
     return Math.min(Math.max(fee, 100), 1500);
+  }
+
+  async cancelTransfer(id: string): Promise<TransferEntity> {
+    const transfer = await this.findById(id);
+    if (transfer.getStatus() !== TransferStatus.PENDING) {
+      throw new ConflictException('Transfer cannot be cancelled');
+    }
+
+    transfer.setStatus(TransferStatus.CANCELLED);
+    const updatedTransfer = await this.transfersRepository.update(id, transfer);
+    if (!updatedTransfer) {
+      throw new NotFoundException(`Transfer with ID ${id} not found`);
+    }
+
+    // Log cancellation audit
+    this.auditService.log(id, 'TRANSFER_CANCELED', { status: TransferStatus.PENDING }, { status: TransferStatus.CANCELLED });
+
+    return updatedTransfer;
   }
 
   private async generateReference(): Promise<string> {

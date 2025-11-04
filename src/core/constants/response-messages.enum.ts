@@ -23,6 +23,9 @@ export enum ResponseMessages {
   TRANSFER_DETAILS = 'Détails du transfert',
   PROCESSING_SIMULATION_COMPLETED = 'Simulation de traitement terminée',
   AUDIT_LOGS_RETRIEVED_SUCCESSFULLY = 'Journaux d\'audit récupérés avec succès',
+  TRANSFER_CANCELLED_SUCCESSFULLY = 'Transfert annulé avec succès',
+  TRANSFER_CANNOT_BE_CANCELLED = 'Le transfert ne peut pas être annulé',
+  TRANSFER_CANNOT_BE_PROCESSED = 'Le transfert ne peut pas être traité',
 
   // General messages
   BAD_REQUEST = 'Mauvaise requête',

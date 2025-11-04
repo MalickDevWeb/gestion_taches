@@ -6,6 +6,7 @@ import { TransferStatusFilter } from '../../core/entities/transfer-status-filter
 import { ITransfersRepository } from '../../core/interfaces/transfers-repository.interface';
 import { CreateTransferDto } from './dto/create-transfer.dto';
 import { UpdateTransferDto } from './dto/update-transfer.dto';
+import { AuditService } from './audit.service';
 
 describe('TransfersService', () => {
   let service: TransfersService;
@@ -23,6 +24,10 @@ describe('TransfersService', () => {
       add: jest.fn(),
     };
 
+    const mockAuditService = {
+      log: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TransfersService,
@@ -33,6 +38,10 @@ describe('TransfersService', () => {
         {
           provide: 'BullQueue_transfer-processing',
           useValue: mockQueue,
+        },
+        {
+          provide: AuditService,
+          useValue: mockAuditService,
         },
       ],
     }).compile();
@@ -114,7 +123,7 @@ describe('TransfersService', () => {
     expect(mockRepository.update).toHaveBeenCalledWith('1', transfer);
   });
 
-  describe('simulateProcessing', () => {
+  describe('processTransfer', () => {
     let pendingTransfer: TransferEntity;
 
     beforeEach(() => {
@@ -152,8 +161,8 @@ describe('TransfersService', () => {
 
       mockRepository.findById.mockResolvedValue(processingTransfer);
 
-      await expect(service.simulateProcessing('2')).rejects.toThrow(
-        'Only pending transfers can be simulated'
+      await expect(service.processTransfer('2')).rejects.toThrow(
+        'Transfer is not in a processable state'
       );
     });
 
@@ -161,20 +170,20 @@ describe('TransfersService', () => {
       mockRepository.findById.mockResolvedValue(pendingTransfer);
       mockRepository.update.mockResolvedValue(pendingTransfer);
 
-      await service.simulateProcessing('1');
+      await service.processTransfer('1');
 
       expect(mockRepository.update).toHaveBeenCalledWith('1', pendingTransfer);
       expect(pendingTransfer.getStatus()).toBe(TransferStatus.PROCESSING);
     });
 
-    it('should simulate successful processing (90% chance)', async () => {
-      // Mock Math.random to return 0.95 (success)
-      jest.spyOn(Math, 'random').mockReturnValue(0.95);
+    it('should simulate successful processing (70% chance)', async () => {
+      // Mock Math.random to return 0.2 (success since 0.2 < 0.3)
+      jest.spyOn(Math, 'random').mockReturnValue(0.2);
 
       mockRepository.findById.mockResolvedValue(pendingTransfer);
       mockRepository.update.mockResolvedValue(pendingTransfer);
 
-      await service.simulateProcessing('1');
+      await service.processTransfer('1');
 
       // Wait for the timeout to complete
       await new Promise(resolve => setTimeout(resolve, 2100));
@@ -186,14 +195,14 @@ describe('TransfersService', () => {
       jest.restoreAllMocks();
     });
 
-    it('should simulate failed processing (10% chance)', async () => {
-      // Mock Math.random to return 0.05 (failure)
-      jest.spyOn(Math, 'random').mockReturnValue(0.05);
+    it('should simulate failed processing (30% chance)', async () => {
+      // Mock Math.random to return 0.5 (failure since 0.5 > 0.3)
+      jest.spyOn(Math, 'random').mockReturnValue(0.5);
 
       mockRepository.findById.mockResolvedValue(pendingTransfer);
       mockRepository.update.mockResolvedValue(pendingTransfer);
 
-      await service.simulateProcessing('1');
+      await service.processTransfer('1');
 
       // Wait for the timeout to complete
       await new Promise(resolve => setTimeout(resolve, 2100));
@@ -203,6 +212,14 @@ describe('TransfersService', () => {
 
       // Restore Math.random
       jest.restoreAllMocks();
+    });
+
+    it('should calculate fees correctly', () => {
+      // Test fee calculation directly
+      const serviceInstance = service as any; // Access private method for testing
+      expect(serviceInstance.calculateFees(10000)).toBe(100); // 10000 * 0.008 = 80, ceil to 80, min 100 = 100
+      expect(serviceInstance.calculateFees(100000)).toBe(800); // 100000 * 0.008 = 800
+      expect(serviceInstance.calculateFees(200000)).toBe(1500); // 200000 * 0.008 = 1600, max 1500 = 1500
     });
   });
 

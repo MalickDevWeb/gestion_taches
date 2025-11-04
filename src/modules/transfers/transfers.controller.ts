@@ -33,15 +33,14 @@ export class TransfersController {
       example1: {
         summary: 'Basic transfer',
         value: {
-          amount: 1000,
-          currency: 'USD',
-          channel: 'mobile',
+          amount: 12500,
+          currency: 'XOF',
+          channel: 'WAVE',
           recipient: {
-            phone: '+1234567890',
-            name: 'John Doe'
+            phone: '+221770000000',
+            name: 'Jane Doe'
           },
-          metadata: { source: 'web' },
-          reference: 'TXN-12345'
+          metadata: { orderId: 'ABC-123' }
         }
       }
     }
@@ -59,18 +58,32 @@ export class TransfersController {
 
   @Get()
   @ApiOperation({ summary: 'Get all transfers with optional filters' })
-  @ApiQuery({ type: TransferQueryDto })
+  @ApiQuery({ name: 'status', required: false, enum: ['pending', 'processing', 'completed', 'failed', 'cancelled'] })
+  @ApiQuery({ name: 'channel', required: false, type: String })
+  @ApiQuery({ name: 'minAmount', required: false, type: Number })
+  @ApiQuery({ name: 'maxAmount', required: false, type: Number })
+  @ApiQuery({ name: 'q', required: false, type: String, description: 'Search in reference or recipient name' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, maximum: 50 })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
   @ApiResponse({
     status: HttpStatusCodes.OK,
     description: ResponseMessages.TRANSFERS_LIST,
-    type: [TransferResponseDto]
+    schema: {
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/TransferResponseDto' }
+        },
+        nextCursor: { type: 'string' }
+      }
+    }
   })
   @ApiResponse({ status: HttpStatusCodes.BAD_REQUEST, description: ResponseMessages.BAD_REQUEST })
-  async findAll(@Query() query: TransferQueryDto): Promise<{ data: TransferResponseDto[]; hasNext: boolean; nextCursor?: string }> {
+  async findAll(@Query() query: TransferQueryDto): Promise<{ items: TransferResponseDto[]; nextCursor?: string }> {
     const result = await this.transfersService.findAll(query);
     return {
-      data: this.transferResponseTransformer.transformMany(result.data),
-      hasNext: result.hasNextPage,
+      items: this.transferResponseTransformer.transformMany(result.data),
       nextCursor: result.nextCursor,
     };
   }
@@ -90,38 +103,10 @@ export class TransfersController {
     return this.transferResponseTransformer.transform(transfer);
   }
 
-  @Bind(Param('id'), Body())
-  @Patch(':id')
-  @ApiOperation({ summary: 'Update transfer status' })
-  @ApiParam({ name: 'id', description: 'Transfer ID' })
-  @ApiBody({
-    type: UpdateTransferDto,
-    examples: {
-      example1: {
-        summary: 'Update status to processing',
-        value: { status: 'PROCESSING' }
-      },
-      example2: {
-        summary: 'Update amount',
-        value: { amount: 1500 }
-      }
-    }
-  })
-  @ApiResponse({
-    status: HttpStatusCodes.OK,
-    description: ResponseMessages.TRANSFER_UPDATED_SUCCESSFULLY,
-    type: TransferResponseDto
-  })
-  @ApiResponse({ status: HttpStatusCodes.NOT_FOUND, description: ResponseMessages.TRANSFER_NOT_FOUND })
-  @ApiResponse({ status: HttpStatusCodes.BAD_REQUEST, description: ResponseMessages.BAD_REQUEST })
-  async updateStatus(id: string, updateTransferDto: UpdateTransferDto): Promise<TransferResponseDto> {
-    const transfer = await this.transfersService.updateStatus(id, updateTransferDto);
-    return this.transferResponseTransformer.transform(transfer);
-  }
 
   @Bind(Param('id'))
-  @Post(':id/simulate')
-  @ApiOperation({ summary: 'Simulate transfer processing' })
+  @Post(':id/process')
+  @ApiOperation({ summary: 'Process transfer' })
   @ApiParam({ name: 'id', description: 'Transfer ID' })
   @ApiResponse({
     status: HttpStatusCodes.OK,
@@ -129,8 +114,25 @@ export class TransfersController {
     type: TransferResponseDto
   })
   @ApiResponse({ status: HttpStatusCodes.NOT_FOUND, description: ResponseMessages.TRANSFER_NOT_FOUND })
-  async simulateProcessing(id: string): Promise<TransferResponseDto> {
-    const transfer = await this.transfersService.simulateProcessing(id);
+  @ApiResponse({ status: HttpStatusCodes.CONFLICT, description: ResponseMessages.TRANSFER_CANNOT_BE_PROCESSED })
+  async processTransfer(id: string): Promise<TransferResponseDto> {
+    const transfer = await this.transfersService.processTransfer(id);
+    return this.transferResponseTransformer.transform(transfer);
+  }
+
+  @Bind(Param('id'))
+  @Post(':id/cancel')
+  @ApiOperation({ summary: 'Cancel a transfer' })
+  @ApiParam({ name: 'id', description: 'Transfer ID' })
+  @ApiResponse({
+    status: HttpStatusCodes.OK,
+    description: ResponseMessages.TRANSFER_CANCELLED_SUCCESSFULLY,
+    type: TransferResponseDto
+  })
+  @ApiResponse({ status: HttpStatusCodes.NOT_FOUND, description: ResponseMessages.TRANSFER_NOT_FOUND })
+  @ApiResponse({ status: HttpStatusCodes.CONFLICT, description: ResponseMessages.TRANSFER_CANNOT_BE_CANCELLED })
+  async cancelTransfer(id: string): Promise<TransferResponseDto> {
+    const transfer = await this.transfersService.cancelTransfer(id);
     return this.transferResponseTransformer.transform(transfer);
   }
 
@@ -160,9 +162,9 @@ export class TransfersController {
       {
         id: 'log-1',
         transferId: 'transfer-123',
-        action: 'STATUS_CHANGE',
-        oldValues: { status: 'PENDING' },
-        newValues: { status: 'PROCESSING' },
+        action: 'TRANSFER_CREATED',
+        oldValues: null,
+        newValues: { status: 'PENDING' },
         timestamp: '2023-11-03T00:00:00.000Z',
         userId: 'user-456'
       }

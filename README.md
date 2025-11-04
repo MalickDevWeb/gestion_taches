@@ -69,6 +69,64 @@ createdb transfer_api
 DATABASE_URL="postgresql://username:password@localhost:5432/transfer_api"
 ```
 
+## Database Migrations
+
+### Running Migrations
+
+```bash
+# Apply all pending migrations
+npm run migration:run
+
+# Or with npx
+npx typeorm migration:run
+```
+
+### Creating New Migrations
+
+```bash
+# Create a new migration file
+npx typeorm migration:create src/migrations/YourMigrationName
+
+# Example for creating a new table
+npx typeorm migration:create src/migrations/CreateNewTable
+```
+
+### Migration Status
+
+```bash
+# Check migration status
+npx typeorm migration:show
+
+# Revert last migration
+npx typeorm migration:revert
+```
+
+### Seeding Data
+
+```bash
+# Run seeders to populate database with test data
+npm run seed
+
+# Or manually
+npx ts-node src/database/seed.ts
+```
+
+### Database Commands
+
+```bash
+# Connect to database directly (replace with your connection string)
+psql 'postgresql://neondb_owner:npg_rhmzYEV8FSJ0@ep-royal-dream-ah8vtbw9.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
+
+# Check tables
+psql 'your-connection-string' -c "\dt"
+
+# Count records in transfers table
+psql 'your-connection-string' -c "SELECT COUNT(*) FROM transfers;"
+
+# View sample transfer data
+psql 'your-connection-string' -c "SELECT reference, recipient->>'name' as name, amount, status FROM transfers LIMIT 5;"
+```
+
 ## Running the Application
 
 ### Development Mode
@@ -102,7 +160,8 @@ All endpoints are prefixed with `/api`. Transfers endpoints require API key auth
 | GET | `/api/transfers` | Get all transfers (with optional filters) |
 | GET | `/api/transfers/:id` | Get transfer by ID |
 | PATCH | `/api/transfers/:id` | Update transfer status |
-| POST | `/api/transfers/:id/simulate` | Simulate transfer processing |
+| POST | `/api/transfers/:id/process` | Process transfer |
+| POST | `/api/transfers/:id/cancel` | Cancel transfer |
 | GET | `/api/transfers/:id/audit` | Get audit logs for transfer |
 
 ### Users (`/api/users`)
@@ -135,24 +194,23 @@ All endpoints are prefixed with `/api`. Transfers endpoints require API key auth
 ```bash
 curl -X POST http://localhost:3001/api/transfers \
   -H "Content-Type: application/json" \
-  -H "x-api-key: your-api-key-here" \
+  -H "x-api-key: dexchange-api-key-2025" \
   -d '{
-    "amount": 1000,
-    "currency": "USD",
-    "channel": "mobile",
+    "amount": 12500,
+    "currency": "XOF",
+    "channel": "WAVE",
     "recipient": {
-      "phone": "+1234567890",
-      "name": "John Doe"
+      "phone": "+221770000000",
+      "name": "Jane Doe"
     },
-    "metadata": { "source": "web" },
-    "reference": "TXN-12345"
+    "metadata": { "orderId": "ABC-123" }
   }'
 ```
 
 ### Getting All Transfers with Filters
 ```bash
 curl "http://localhost:3001/api/transfers?status=PENDING&limit=10" \
-  -H "x-api-key: your-api-key-here"
+  -H "x-api-key: dexchange-api-key-2025"
 ```
 
 ### Creating a User
@@ -162,10 +220,22 @@ curl -X POST http://localhost:3001/api/users \
   -d '{"email": "user@example.com", "name": "John Doe"}'
 ```
 
+### Processing a Transfer
+```bash
+curl -X POST http://localhost:3001/api/transfers/{transfer-id}/process \
+  -H "x-api-key: dexchange-api-key-2025"
+```
+
+### Cancelling a Transfer
+```bash
+curl -X POST http://localhost:3001/api/transfers/{transfer-id}/cancel \
+  -H "x-api-key: dexchange-api-key-2025"
+```
+
 ### Getting Transfer Audit Logs
 ```bash
 curl http://localhost:3001/api/transfers/123/audit \
-  -H "x-api-key: your-api-key-here"
+  -H "x-api-key: dexchange-api-key-2025"
 ```
 
 ## Troubleshooting
@@ -185,21 +255,62 @@ Si vous obtenez cette erreur, c'est probablement un problème de modules. Assure
 2. Assurez-vous que tous les imports sont corrects
 3. Vérifiez que le client Prisma est généré
 
-## Commandes Prisma utiles
+## Available Scripts
 
 ```bash
-# Générer le client
-npx prisma generate
+# Development
+npm run start:dev          # Start development server with hot reload
+npm run start:debug        # Start with debugger
+npm run build             # Build for production
+npm run start:prod        # Start production server
 
-# Voir le statut de la base de données
-npx prisma db push --preview-feature
+# Database
+npm run migration:run     # Apply all pending migrations
+npm run migration:revert  # Revert last migration
+npm run seed              # Populate database with test data
 
-# Ouvrir Prisma Studio (interface graphique)
-npx prisma studio
+# Testing
+npm run test              # Run unit tests
+npm run test:watch        # Run tests in watch mode
+npm run test:cov          # Run tests with coverage
+npm run test:e2e          # Run end-to-end tests
 
-# Créer une migration (si vous utilisez les migrations)
-npx prisma migrate dev --name init
+# Code Quality
+npm run lint              # Run ESLint
+npm run format            # Format code with Prettier
 ```
+
+## Migration Files
+
+The project includes the following migration files:
+
+- `1762158709510-CreateUsersTable.ts` - Creates users table
+- `1762158714973-CreateTransfersTable.ts` - Creates transfers table with enum
+- `1762213850336-CreateSenegaleseTransfersTable.ts` - Optimized transfers table with indexes and seed data
+- `1762213934984-SeedSenegaleseTransfers.ts` - Additional Senegalese test data
+
+## Business Rules
+
+### Transfer Fees Calculation
+- Fee = 0.8% of amount (rounded up)
+- Minimum fee: 100
+- Maximum fee: 1500
+- Total = amount + fees
+
+### Transfer Status Flow
+```
+PENDING → PROCESSING → SUCCESS | FAILED
+PENDING → CANCELLED
+```
+
+### Processing Simulation
+- 70% success rate
+- 30% failure rate
+- Processing delay: 2 seconds
+
+### State Transitions
+- Only PENDING transfers can be processed or cancelled
+- COMPLETED, FAILED, and CANCELLED are final states
 
 ## Sécurité
 

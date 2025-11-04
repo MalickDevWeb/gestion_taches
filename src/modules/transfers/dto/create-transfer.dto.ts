@@ -32,7 +32,7 @@ export class CreateTransferDto {
 
   @ApiProperty({
     description: 'Currency code',
-    example: 'USD'
+    example: 'XOF'
   })
   @IsNotEmpty()
   @IsString()

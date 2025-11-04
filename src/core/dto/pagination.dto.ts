@@ -5,7 +5,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 export class PaginationDto {
   @ApiPropertyOptional({
     description: 'Cursor for pagination (ID of the last item in the previous page)',
-    example: 'transfer-123',
+    example: '550e8400-e29b-41d4-a716-446655440003',
   })
   @IsOptional()
   @IsString()

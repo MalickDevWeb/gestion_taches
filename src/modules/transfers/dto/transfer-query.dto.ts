@@ -9,7 +9,7 @@ export class TransferQueryDto extends PaginationDto {
   @ApiPropertyOptional({
     description: 'Filter by transfer status',
     enum: TransferStatusFilter,
-    example: TransferStatusFilter.PENDING
+    example: 'pending'
   })
   @IsOptional()
   @IsEnum(TransferStatusFilter)
@@ -17,7 +17,7 @@ export class TransferQueryDto extends PaginationDto {
 
   @ApiPropertyOptional({
     description: 'Minimum transfer amount',
-    example: 100,
+    example: 15000,
     minimum: 0
   })
   @IsOptional()
@@ -28,7 +28,7 @@ export class TransferQueryDto extends PaginationDto {
 
   @ApiPropertyOptional({
     description: 'Maximum transfer amount',
-    example: 10000,
+    example: 50000,
     minimum: 0
   })
   @IsOptional()
@@ -39,7 +39,7 @@ export class TransferQueryDto extends PaginationDto {
 
   @ApiPropertyOptional({
     description: 'Filter transfers created after this date (ISO 8601)',
-    example: '2023-01-01T00:00:00.000Z'
+    example: '2025-01-01T00:00:00.000Z'
   })
   @IsOptional()
   @IsDateString()
@@ -47,7 +47,7 @@ export class TransferQueryDto extends PaginationDto {
 
   @ApiPropertyOptional({
     description: 'Filter transfers created before this date (ISO 8601)',
-    example: '2023-12-31T23:59:59.999Z'
+    example: '2025-01-02T00:00:00.000Z'
   })
   @IsOptional()
   @IsDateString()
@@ -55,7 +55,7 @@ export class TransferQueryDto extends PaginationDto {
 
   @ApiPropertyOptional({
     description: 'Filter by currency',
-    example: 'USD'
+    example: 'XOF'
   })
   @IsOptional()
   @IsString()
@@ -63,7 +63,7 @@ export class TransferQueryDto extends PaginationDto {
 
   @ApiPropertyOptional({
     description: 'Filter by channel',
-    example: 'mobile'
+    example: 'WAVE'
   })
   @IsOptional()
   @IsString()
@@ -71,7 +71,7 @@ export class TransferQueryDto extends PaginationDto {
 
   @ApiPropertyOptional({
     description: 'Filter by reference',
-    example: 'TXN-12345'
+    example: 'TRF-20250101'
   })
   @IsOptional()
   @IsString()

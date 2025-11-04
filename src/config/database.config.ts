@@ -5,9 +5,9 @@ export const databaseConfig: TypeOrmModuleOptions = {
   url: process.env.DATABASE_URL,
   entities: ['dist/**/*.entity{.ts,.js}'],
   migrations: ['dist/migrations/*{.ts,.js}'],
-  synchronize: process.env.NODE_ENV !== 'production',
+  synchronize: false, // Désactiver synchronisation pour éviter conflits
   logging: process.env.NODE_ENV === 'development',
-  migrationsRun: process.env.NODE_ENV === 'production',
+  migrationsRun: true, // Utiliser migrations
   extra: {
     ssl: { rejectUnauthorized: false }
   }

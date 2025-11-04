@@ -191,6 +191,12 @@ export class TransfersRepository implements ITransfersRepository {
     if (filters.reference) {
       queryBuilder.andWhere('transfer.reference = :reference', { reference: filters.reference });
     }
+    if (filters.q) {
+      queryBuilder.andWhere(
+        '(transfer.reference ILIKE :q OR transfer.recipient->>\'name\' ILIKE :q)',
+        { q: `%${filters.q}%` }
+      );
+    }
 
     if (options.cursor) {
       queryBuilder.andWhere('transfer.id > :cursor', { cursor: options.cursor });

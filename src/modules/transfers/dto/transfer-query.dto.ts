@@ -76,4 +76,12 @@ export class TransferQueryDto extends PaginationDto {
   @IsOptional()
   @IsString()
   reference?: string;
+
+  @ApiPropertyOptional({
+    description: 'Search in reference or recipient name',
+    example: 'TRF-20250101'
+  })
+  @IsOptional()
+  @IsString()
+  q?: string;
 }

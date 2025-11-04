@@ -61,6 +61,7 @@ export class TransfersService {
       currency: query.currency,
       channel: query.channel,
       reference: query.reference,
+      q: query.q,
     };
 
     const options = {

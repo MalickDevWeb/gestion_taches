@@ -188,13 +188,25 @@ All endpoints are prefixed with `/api`. Transfers endpoints require API key auth
 | PATCH | `/api/tasks/:id` | Update task |
 | DELETE | `/api/tasks/:id` | Delete task |
 
-## Usage Examples
+## Testing API Endpoints
 
-### Creating a Transfer (Requires API Key)
+### Prerequisites
 ```bash
-curl -X POST http://localhost:3001/api/transfers \
+# Start the application in development mode
+npm run start:dev
+
+# Or in production mode
+npm run build
+npm run start:prod
+
+# The API will be available at http://localhost:3001
+# Swagger documentation at http://localhost:3001/docs
+```
+
+### 1. Creating a Transfer
+```bash
+curl -X POST http://localhost:3001/api/v1/papamalickteuw/transfers \
   -H "Content-Type: application/json" \
-  -H "x-api-key: dexchange-api-key-2025" \
   -d '{
     "amount": 12500,
     "currency": "XOF",
@@ -205,38 +217,230 @@ curl -X POST http://localhost:3001/api/transfers \
     },
     "metadata": { "orderId": "ABC-123" }
   }'
+
+# Expected Response: 201 Created
+# Returns transfer object with generated reference, fees, and status: "PENDING"
 ```
 
-### Getting All Transfers with Filters
+### 2. Getting All Transfers (with optional filters)
 ```bash
-curl "http://localhost:3001/api/transfers?status=PENDING&limit=10" \
-  -H "x-api-key: dexchange-api-key-2025"
+# Get all transfers
+curl -X GET "http://localhost:3001/api/v1/papamalickteuw/transfers"
+
+# With filters
+curl -X GET "http://localhost:3001/api/v1/papamalickteuw/transfers?status=PENDING&limit=10"
+
+# Search by reference or recipient name
+curl -X GET "http://localhost:3001/api/v1/papamalickteuw/transfers?q=TRF-20250101"
+
+# Filter by amount range
+curl -X GET "http://localhost:3001/api/v1/papamalickteuw/transfers?minAmount=10000&maxAmount=50000"
+
+# Filter by channel
+curl -X GET "http://localhost:3001/api/v1/papamalickteuw/transfers?channel=WAVE"
+
+# Expected Response: 200 OK
+# Returns: { "items": [...], "nextCursor": "..." }
 ```
 
-### Creating a User
+### 3. Getting a Transfer by ID
 ```bash
-curl -X POST http://localhost:3001/api/users \
+# Replace {transfer-id} with actual ID from creation response
+curl -X GET "http://localhost:3001/api/v1/papamalickteuw/transfers/{transfer-id}"
+
+# Expected Response: 200 OK or 404 Not Found
+```
+
+### 4. Processing a Transfer
+```bash
+# Replace {transfer-id} with actual ID
+curl -X POST "http://localhost:3001/api/v1/papamalickteuw/transfers/{transfer-id}/process"
+
+# Expected Response: 200 OK
+# Status changes: PENDING → PROCESSING → SUCCESS (70%) or FAILED (30%)
+# Returns updated transfer object
+```
+
+### 5. Cancelling a Transfer
+```bash
+# Replace {transfer-id} with actual ID
+curl -X POST "http://localhost:3001/api/v1/papamalickteuw/transfers/{transfer-id}/cancel"
+
+# Expected Response: 200 OK or 409 Conflict (if not PENDING)
+# Status changes: PENDING → CANCELLED
+```
+
+### 6. Getting Transfer Audit Logs
+```bash
+# Replace {transfer-id} with actual ID
+curl -X GET "http://localhost:3001/api/v1/papamalickteuw/transfers/{transfer-id}/audit"
+
+# Expected Response: 200 OK
+# Returns array of audit log entries
+```
+
+### 7. Testing Users Endpoints
+```bash
+# Create a user
+curl -X POST http://localhost:3001/api/v1/papamalickteuw/users \
   -H "Content-Type: application/json" \
-  -d '{"email": "user@example.com", "name": "John Doe"}'
+  -d '{
+    "name": "John Doe",
+    "email": "john@example.com",
+    "password": "securepassword123"
+  }'
+
+# Get all users
+curl -X GET "http://localhost:3001/api/v1/papamalickteuw/users"
+
+# Expected Response: 200 OK
 ```
 
-### Processing a Transfer
+### 8. Testing with Production Database (Render)
 ```bash
-curl -X POST http://localhost:3001/api/transfers/{transfer-id}/process \
-  -H "x-api-key: dexchange-api-key-2025"
+# Replace with your actual deployed URL
+BASE_URL="https://your-app-name.onrender.com"
+
+# Test transfers endpoint
+curl -X GET "$BASE_URL/api/v1/papamalickteuw/transfers"
+
+# Test users endpoint (health check)
+curl -X GET "$BASE_URL/api/v1/papamalickteuw/users"
+
+# Expected: Should return data from your Render PostgreSQL database
 ```
 
-### Cancelling a Transfer
+### 9. Testing Error Cases
 ```bash
-curl -X POST http://localhost:3001/api/transfers/{transfer-id}/cancel \
-  -H "x-api-key: dexchange-api-key-2025"
+# Try to get non-existent transfer
+curl -X GET "http://localhost:3001/api/v1/papamalickteuw/transfers/non-existent-id"
+# Expected: 404 Not Found
+
+# Try to process already processed transfer
+curl -X POST "http://localhost:3001/api/v1/papamalickteuw/transfers/{processed-id}/process"
+# Expected: 409 Conflict
+
+# Try to cancel completed transfer
+curl -X POST "http://localhost:3001/api/v1/papamalickteuw/transfers/{completed-id}/cancel"
+# Expected: 409 Conflict
 ```
 
-### Getting Transfer Audit Logs
+### 10. Testing Pagination
 ```bash
-curl http://localhost:3001/api/transfers/123/audit \
-  -H "x-api-key: dexchange-api-key-2025"
+# Get first page (default limit: 10)
+curl -X GET "http://localhost:3001/api/v1/papamalickteuw/transfers?limit=5"
+
+# Get next page using cursor
+curl -X GET "http://localhost:3001/api/v1/papamalickteuw/transfers?limit=5&cursor=eyJpZCI6IjEwIn0"
+
+# Expected: Cursor-based pagination working correctly
 ```
+
+### 11. Testing Business Rules
+```bash
+# Test fee calculation (0.8% of 12500 = 100, min fee = 100)
+curl -X POST http://localhost:3001/api/v1/papamalickteuw/transfers \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 12500,
+    "currency": "XOF",
+    "channel": "WAVE",
+    "recipient": {
+      "phone": "+221770000000",
+      "name": "Test User"
+    }
+  }'
+# Expected: fees = 100, total = 12600
+
+# Test high amount fee cap (0.8% of 200000 = 1600, but max fee = 1500)
+curl -X POST http://localhost:3001/api/v1/papamalickteuw/transfers \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 200000,
+    "currency": "XOF",
+    "channel": "WAVE",
+    "recipient": {
+      "phone": "+221770000000",
+      "name": "High Amount User"
+    }
+  }'
+# Expected: fees = 1500, total = 201500
+```
+
+### 12. Testing Swagger Documentation
+```bash
+# Open in browser
+open http://localhost:3001/docs
+
+# Or with curl to check if accessible
+curl -s http://localhost:3001/docs | head -20
+# Expected: HTML content of Swagger UI
+```
+
+### 13. Testing Docker Production Build
+```bash
+# Build the image
+docker build -t dexchange-app:test .
+
+# Run in production mode
+docker run -d --name dexchange-test -p 10000:10000 \
+  -e NODE_ENV=production \
+  -e PORT=10000 \
+  -e DATABASE_URL="your-database-url" \
+  dexchange-app:test
+
+# Test the containerized API
+curl -X GET "http://localhost:10000/api/v1/papamalickteuw/transfers"
+
+# Clean up
+docker stop dexchange-test
+docker rm dexchange-test
+```
+
+### 14. Testing Database Connection
+```bash
+# Check if migrations ran successfully
+npm run migration:run
+
+# Check database content
+psql "$DATABASE_URL" -c "SELECT COUNT(*) FROM transfers;"
+
+# Check if seed data exists
+psql "$DATABASE_URL" -c "SELECT reference, status, amount FROM transfers LIMIT 3;"
+```
+
+### 15. Performance Testing
+```bash
+# Simple load test with multiple requests
+for i in {1..10}; do
+  curl -s -X GET "http://localhost:3001/api/v1/papamalickteuw/transfers" > /dev/null &
+done
+wait
+echo "Load test completed"
+```
+
+## Common Issues & Solutions
+
+### Issue: "API key is required" error
+**Solution**: Remove `@UseGuards(ApiKeyGuard)` from controller or add API key header
+
+### Issue: "relation 'transfers' does not exist"
+**Solution**: Run migrations first
+```bash
+npm run migration:run
+```
+
+### Issue: Port already in use
+**Solution**: Change port in `.env` or kill process using the port
+```bash
+lsof -ti:3001 | xargs kill -9
+```
+
+### Issue: Database connection failed
+**Solution**: Check `DATABASE_URL` in `.env` file and ensure database is accessible
+
+### Issue: Swagger not loading
+**Solution**: Ensure app is running and visit `http://localhost:3001/docs`
 
 ## Troubleshooting
 

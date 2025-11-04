@@ -12,6 +12,7 @@ export interface TransferFilters {
   currency?: string;
   channel?: string;
   reference?: string;
+  q?: string;
 }
 
 export interface PaginationOptions {

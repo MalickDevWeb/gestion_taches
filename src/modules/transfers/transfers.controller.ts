@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards, UseInterceptors, Bind } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, Query, UseInterceptors, Bind } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { TransfersService } from './transfers.service';
 import { AuditService } from './audit.service';
@@ -7,7 +7,6 @@ import { CreateTransferDto } from './dto/create-transfer.dto';
 import { UpdateTransferDto } from './dto/update-transfer.dto';
 import { TransferQueryDto } from './dto/transfer-query.dto';
 import { TransferResponseDto } from './transfer-response.dto';
-import { ApiKeyGuard } from '../../core/guards/api-key.guard';
 import { AuditInterceptor } from './audit.interceptor';
 import { TransferEntity } from '../../core/entities/transfer.entity';
 import { AuditLog } from '../../core/interfaces/audit-log.interface';
@@ -16,7 +15,6 @@ import { HttpStatusCodes } from '../../core/constants/http-status-codes.enum';
 
 @ApiTags('transfers')
 @Controller('transfers')
-@UseGuards(ApiKeyGuard)
 @UseInterceptors(AuditInterceptor)
 export class TransfersController {
   constructor(

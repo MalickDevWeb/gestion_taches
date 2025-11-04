@@ -10,6 +10,8 @@ import { UpdateTransferDto } from './dto/update-transfer.dto';
 import { TransferQueryDto } from './dto/transfer-query.dto';
 import { TransferProcessingJobData } from './transfer-processing.processor';
 import { AuditService } from './audit.service';
+import { ResponseMessages } from '../../core/constants/response-messages.enum';
+import { HttpStatusCodes } from '../../core/constants/http-status-codes.enum';
 
 @Injectable()
 export class TransfersService {
@@ -75,7 +77,7 @@ export class TransfersService {
   async findById(id: string): Promise<TransferEntity> {
     const transfer = await this.transfersRepository.findById(id);
     if (!transfer) {
-      throw new NotFoundException(`Transfer with ID ${id} not found`);
+      throw new NotFoundException(ResponseMessages.TRANSFER_NOT_FOUND);
     }
     return transfer;
   }
@@ -91,7 +93,7 @@ export class TransfersService {
     // Note: Other fields are not updatable via this endpoint as per requirements
     const updatedTransfer = await this.transfersRepository.update(id, transfer);
     if (!updatedTransfer) {
-      throw new NotFoundException(`Transfer with ID ${id} not found`);
+      throw new NotFoundException(ResponseMessages.TRANSFER_NOT_FOUND);
     }
     return updatedTransfer;
   }
@@ -99,7 +101,7 @@ export class TransfersService {
   async processTransfer(id: string): Promise<TransferEntity> {
     const transfer = await this.findById(id);
     if (transfer.getStatus() !== TransferStatus.PENDING) {
-      throw new ConflictException('Transfer is not in a processable state');
+      throw new ConflictException(ResponseMessages.TRANSFER_CANNOT_BE_PROCESSED);
     }
 
     // Set to processing
@@ -125,7 +127,7 @@ export class TransfersService {
 
     const updatedTransfer = await this.transfersRepository.update(id, transfer);
     if (!updatedTransfer) {
-      throw new NotFoundException(`Transfer with ID ${id} not found`);
+      throw new NotFoundException(ResponseMessages.TRANSFER_NOT_FOUND);
     }
     return updatedTransfer;
   }
@@ -138,13 +140,13 @@ export class TransfersService {
   async cancelTransfer(id: string): Promise<TransferEntity> {
     const transfer = await this.findById(id);
     if (transfer.getStatus() !== TransferStatus.PENDING) {
-      throw new ConflictException('Transfer cannot be cancelled');
+      throw new ConflictException(ResponseMessages.TRANSFER_CANNOT_BE_CANCELLED);
     }
 
     transfer.setStatus(TransferStatus.CANCELLED);
     const updatedTransfer = await this.transfersRepository.update(id, transfer);
     if (!updatedTransfer) {
-      throw new NotFoundException(`Transfer with ID ${id} not found`);
+      throw new NotFoundException(ResponseMessages.TRANSFER_NOT_FOUND);
     }
 
     // Log cancellation audit

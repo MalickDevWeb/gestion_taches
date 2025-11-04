@@ -26,11 +26,17 @@ export enum ResponseMessages {
   TRANSFER_CANCELLED_SUCCESSFULLY = 'Transfert annulé avec succès',
   TRANSFER_CANNOT_BE_CANCELLED = 'Le transfert ne peut pas être annulé',
   TRANSFER_CANNOT_BE_PROCESSED = 'Le transfert ne peut pas être traité',
+  TRANSFER_PROCESSED_SUCCESSFULLY = 'Transfert traité avec succès',
 
   // General messages
   BAD_REQUEST = 'Mauvaise requête',
   HELLO_MESSAGE = 'Message de bienvenue',
+  INTERNAL_SERVER_ERROR = 'Erreur interne du serveur',
+  UNAUTHORIZED = 'Non autorisé',
+  FORBIDDEN = 'Accès interdit',
 
   // Error messages
   NOT_FOUND = 'Non trouvé',
+  VALIDATION_ERROR = 'Erreur de validation',
+  DATABASE_ERROR = 'Erreur de base de données',
 }

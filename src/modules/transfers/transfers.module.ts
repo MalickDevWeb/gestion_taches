@@ -9,6 +9,8 @@ import { AuditService } from './audit.service';
 import { AuditInterceptor } from './audit.interceptor';
 import { TransferProcessingProcessor } from './transfer-processing.processor';
 import { TransferResponseTransformer } from './transfer-response.transformer';
+import { CleanupProcessor } from './cleanup.processor';
+import { CleanupService } from './cleanup.service';
 
 @Module({
   imports: [
@@ -36,6 +38,9 @@ import { TransferResponseTransformer } from './transfer-response.transformer';
         };
       },
     }),
+    BullModule.registerQueue({
+      name: 'cleanup',
+    }),
   ],
   controllers: [TransfersController],
   providers: [
@@ -44,11 +49,13 @@ import { TransferResponseTransformer } from './transfer-response.transformer';
     AuditInterceptor,
     TransferProcessingProcessor,
     TransferResponseTransformer,
+    CleanupProcessor,
+    CleanupService,
     {
       provide: 'ITransfersRepository',
       useClass: TransfersRepository,
     },
   ],
-  exports: [TransfersService, AuditService],
+  exports: [TransfersService, AuditService, CleanupService],
 })
 export class TransfersModule {}

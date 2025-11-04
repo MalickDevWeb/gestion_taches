@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PaginationDto, PaginatedResponse } from '../../core/dto/pagination.dto';
 import { UserEntity } from '../../core/entities/user.entity';
+import { ResponseMessages } from '../../core/constants/response-messages.enum';
 
 @Injectable()
 export class UsersService {
@@ -47,13 +48,16 @@ export class UsersService {
     };
   }
 
-  async findOne(id: number): Promise<UserEntity | null> {
-    return await this.userRepository.findOne({ where: { id } });
+  async findOne(id: number): Promise<UserEntity> {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException(ResponseMessages.USER_NOT_FOUND);
+    }
+    return user;
   }
 
-  async update(id: number, updateUserDto: UpdateUserDto): Promise<UserEntity | null> {
+  async update(id: number, updateUserDto: UpdateUserDto): Promise<UserEntity> {
     const user = await this.findOne(id);
-    if (!user) return null;
 
     // Update user properties
     if (updateUserDto.name) user.name = updateUserDto.name;

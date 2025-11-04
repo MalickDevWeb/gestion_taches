@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { PaginationDto, PaginatedResponse } from '../../core/dto/pagination.dto';
 import { TaskEntity, TaskStatus } from './entities/task.entity';
+import { ResponseMessages } from '../../core/constants/response-messages.enum';
 
 @Injectable()
 export class TasksService {
@@ -48,8 +49,12 @@ export class TasksService {
     };
   }
 
-  async findOne(id: number): Promise<TaskEntity | null> {
-    return await this.taskRepository.findOne({ where: { id }, relations: ['user'] });
+  async findOne(id: number): Promise<TaskEntity> {
+    const task = await this.taskRepository.findOne({ where: { id }, relations: ['user'] });
+    if (!task) {
+      throw new NotFoundException(ResponseMessages.TASK_NOT_FOUND);
+    }
+    return task;
   }
 
   async findByUserId(userId: number, pagination: PaginationDto): Promise<PaginatedResponse<TaskEntity>> {
@@ -77,9 +82,8 @@ export class TasksService {
     };
   }
 
-  async update(id: number, updateTaskDto: UpdateTaskDto): Promise<TaskEntity | null> {
+  async update(id: number, updateTaskDto: UpdateTaskDto): Promise<TaskEntity> {
     const task = await this.findOne(id);
-    if (!task) return null;
 
     // Update task properties
     if (updateTaskDto.title) task.title = updateTaskDto.title;

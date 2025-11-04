@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, AfterLoad, BeforeInsert, BeforeUpdate } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { TransferStatus } from './transfer-status.enum';
 import { FeeConstants } from '../constants/fee-constants.enum';
@@ -18,11 +18,17 @@ export class TransferEntity {
   @ApiProperty({ description: 'Transfer ID' })
   id!: string;
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column('decimal', { precision: 10, scale: 2, transformer: {
+    to: (value: number) => value,
+    from: (value: string) => parseFloat(value)
+  }})
   @ApiProperty({ description: 'Transfer amount' })
   amount!: number;
 
-  @Column({ length: 3, default: 'XOF' })
+  @Column({ length: 3, default: 'XOF', transformer: {
+    to: (value: string) => value?.toUpperCase(),
+    from: (value: string) => value?.toUpperCase()
+  }})
   @ApiProperty({ description: 'Currency code' })
   currency!: string;
 
@@ -38,7 +44,10 @@ export class TransferEntity {
   @ApiProperty({ description: 'Additional metadata' })
   metadata!: Metadata;
 
-  @Column({ type: 'varchar', default: TransferStatus.PENDING })
+  @Column({ type: 'varchar', default: TransferStatus.PENDING, transformer: {
+    to: (value: TransferStatus) => value,
+    from: (value: string) => value as TransferStatus
+  }})
   @ApiProperty({ description: 'Transfer status', enum: TransferStatus })
   status!: TransferStatus;
 
@@ -46,11 +55,17 @@ export class TransferEntity {
   @ApiProperty({ description: 'Transfer reference' })
   reference!: string;
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column('decimal', { precision: 10, scale: 2, transformer: {
+    to: (value: number) => value,
+    from: (value: string) => parseFloat(value)
+  }})
   @ApiProperty({ description: 'Transfer fees' })
   fees!: number;
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column('decimal', { precision: 10, scale: 2, transformer: {
+    to: (value: number) => value,
+    from: (value: string) => parseFloat(value)
+  }})
   @ApiProperty({ description: 'Total amount including fees' })
   total!: number;
 
@@ -61,6 +76,46 @@ export class TransferEntity {
   @UpdateDateColumn()
   @ApiProperty({ description: 'Last update timestamp' })
   updatedAt!: Date;
+
+  // Computed properties for formatted display
+  formattedAmount!: string;
+  statusLabel!: string;
+  processingTimeMinutes!: number;
+
+  @AfterLoad()
+  setComputedProperties(): void {
+    this.formattedAmount = this.formatAmount();
+    this.statusLabel = this.getStatusLabel();
+    this.processingTimeMinutes = this.getProcessingTimeMinutes();
+  }
+
+  private formatAmount(): string {
+    const formatter = new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: this.currency || 'XOF',
+      minimumFractionDigits: 0,
+    });
+    return formatter.format(this.amount);
+  }
+
+  private getStatusLabel(): string {
+    const labels: Record<TransferStatus, string> = {
+      [TransferStatus.PENDING]: 'Pending',
+      [TransferStatus.PROCESSING]: 'Processing',
+      [TransferStatus.COMPLETED]: 'Completed',
+      [TransferStatus.FAILED]: 'Failed',
+      [TransferStatus.CANCELLED]: 'Cancelled',
+    };
+    return labels[this.status] || 'Unknown';
+  }
+
+  private getProcessingTimeMinutes(): number {
+    if (!this.createdAt || !this.updatedAt) return 0;
+    if (this.status === TransferStatus.PENDING) return 0;
+
+    const diffMs = this.updatedAt.getTime() - this.createdAt.getTime();
+    return Math.floor(diffMs / (1000 * 60));
+  }
 
   static create(
     id: string,
